@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📈 Chart Trading Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .money {
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.2s ease-out;
+        }
+        
+        .profit {
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease-out;
+        }
+        
+        .profit.positive {
+            color: #4ade80;
+        }
+        
+        .profit.negative {
+            color: #f87171;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            height: 250px;
+            position: relative;
+        }
+        
+        .chart-canvas {
+            width: 100%;
+            height: 100%;
+            transition: all 0.1s ease-out;
+        }
+        
+        .time-level-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .timer {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .level {
+            font-size: 14px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-buy {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: white;
+        }
+        
+        .btn-buy:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+        
+        .btn-sell {
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            color: white;
+        }
+        
+        .btn-sell:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+        
+        .leaderboard-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .leaderboard-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            color: black;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .modal-result {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        
+        .advice-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .advice-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .pattern-info {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+        
+        .advice-text {
+            font-size: 15px;
+            line-height: 1.4;
+            font-style: italic;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+        
+        .name-input {
+            width: 120px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 10px;
+        }
+        
+        .restart-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        .leaderboard-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+        
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+        
+        .rank {
+            font-weight: bold;
+            width: 30px;
+        }
+        
+        .rank.gold { color: #ffd700; }
+        .rank.silver { color: #c0c0c0; }
+        .rank.bronze { color: #cd7f32; }
+        
+        .player-name {
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 16px;
+        }
+        
+        .score {
+            font-weight: bold;
+            color: #4ade80;
+        }
+        
+        .new-record {
+            background: linear-gradient(135deg, #ffd700, #ffed4a);
+            color: #000;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .start-screen {
+            text-align: center;
+        }
+        
+        .start-title {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        
+        .start-description {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+        
+        .start-button {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+
+        .flow-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 시작 화면 -->
+        <div class="start-screen" id="startScreen">
+            <h1 class="start-title">📈 Chart Trading Game</h1>
+            <p class="start-description">
+                45초 동안 차트를 보고 매수/매도로 최대한 많은 수익을 내보세요!<br>
+                당신의 매매 패턴을 분석해서 맞춤 투자 조언을 제공합니다!
+            </p>
+            <button class="start-button" onclick="startNewGame()">🚀 게임 시작</button>
+            <button class="leaderboard-btn" onclick="showLeaderboard()">🏆 리더보드</button>
+        </div>
+
+        <!-- 게임 화면 -->
+        <div id="gameScreen" style="display: none;">
+            <!-- 상태바 -->
+            <div class="status-bar">
+                <div class="money">💰 $<span id="currentMoney">10000</span></div>
+                <div class="profit" id="profitDisplay">📈 0%</div>
+            </div>
+            
+            <!-- 차트 영역 -->
+            <div class="chart-container">
+                <canvas id="chartCanvas" class="chart-canvas"></canvas>
+            </div>
+            
+            <!-- 시간/레벨 바 -->
+            <div class="time-level-bar">
+                <div class="timer">⏰ <span id="timeDisplay">00:45</span></div>
+                <div class="level">🎯 Round <span id="roundDisplay">1</span></div>
+            </div>
+            
+            <!-- 조작 버튼 -->
+            <div class="control-buttons">
+                <button class="btn btn-buy" id="buyBtn">📈 BUY</button>
+                <button class="btn btn-sell" id="sellBtn" disabled>📉 SELL</button>
+            </div>
+            
+            <button class="leaderboard-btn" onclick="showLeaderboard()">🏆 리더보드 보기</button>
+        </div>
+    </div>
+    
+    <!-- 게임 오버 모달 -->
+    <div class="modal-overlay" id="gameOverScreen">
+        <div class="modal-content">
+            <h2 class="modal-title">🎮 게임 완료!</h2>
+            <p class="modal-result" id="finalResult"></p>
+            
+            <!-- 투자 조언 섹션 -->
+            <div class="advice-section" id="adviceSection">
+                <div class="advice-title" id="adviceTitle">
+                    <span id="patternIcon"></span>
+                    <span id="patternText"></span>
+                </div>
+                <div class="pattern-info" id="patternInfo"></div>
+                <div class="advice-text" id="adviceText"></div>
+            </div>
+            
+            <div id="newRecordSection" style="display: none;">
+                <p style="color: #ffd700; font-weight: bold; margin: 15px 0;">🎉 리더보드 진입!</p>
+                <input type="text" class="name-input" id="playerNameInput" placeholder="ABC" maxlength="3">
+                <p style="font-size: 12px; color: #666;">영문 3글자를 입력하세요</p>
+            </div>
+            
+            <div class="flow-buttons">
+                <button class="restart-btn" onclick="handleGameOver()">다음 단계</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 리더보드 모달 -->
+    <div class="modal-overlay" id="leaderboardScreen">
+        <div class="modal-content">
+            <h2 class="modal-title">🏆 리더보드</h2>
+            <div class="leaderboard-list" id="leaderboardList">
+                <!-- 리더보드 항목들이 여기에 추가됩니다 -->
+            </div>
+            <div class="flow-buttons">
+                <button class="restart-btn" onclick="restartFromLeaderboard()">🔄 다시 하기</button>
+                <button class="restart-btn" onclick="clearLeaderboard()" style="background: #ef4444;">기록 초기화</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let gameState = {
+            cash: 10000,
+            stocks: 0,
+            stockPrice: 100,
+            timeLeft: 45,
+            round: 1,
+            gameRunning: false,
+            chartData: [],
+            maxTime: 45,
+            // 차트 스케일 부드러운 변화를 위한 변수
+            currentMinPrice: 90,
+            currentMaxPrice: 110,
+            targetMinPrice: 90,
+            targetMaxPrice: 110,
+            // 매매 추적 변수
+            trades: [],
+            priceHistory: [],
+            currentPosition: 'cash' // 'cash' or 'stocks'
+        };
+        
+        // 투자 조언 매트릭스
+        const adviceMatrix = {
+            // 대성공 (+30% 이상)
+            'excellent': {
+                'patient': { 
+                    icon: '🎯', 
+                    pattern: '인내형 투자자',
+                    info: '매매 횟수가 적고 장기 보유를 선호하는 스타일',
+                    advice: '"시간이 복리의 마법을 만든다." - 인내심 있는 당신의 투자는 워렌 버핏도 인정할 겁니다!' 
+                },
+                'active': { 
+                    icon: '⚡', 
+                    pattern: '액티브 트레이더',
+                    info: '활발한 매매로 높은 수익을 달성한 스타일',
+                    advice: '"실력인가, 운인가?" - 뛰어난 수익이지만 수수료와 세금을 고려해보세요!' 
+                },
+                'emotional': { 
+                    icon: '🎲', 
+                    pattern: '직감형 투자자',
+                    info: '시장 변화에 즉각 반응하는 매매 스타일',
+                    advice: '"직감이 통했네요!" - 하지만 항상 통할까요? 전략적 접근을 병행해보세요!' 
+                },
+                'cautious': { 
+                    icon: '🐌', 
+                    pattern: '신중형 투자자',
+                    info: '타이밍을 신중히 고려한 매매 스타일',
+                    advice: '"신중함과 타이밍, 성공 투자의 황금조합입니다!" - 계속 이런 스타일을 유지하세요!' 
+                },
+                'overactive': { 
+                    icon: '🎪', 
+                    pattern: '초활성 트레이더',
+                    info: '매우 잦은 매매로 수익을 추구하는 스타일',
+                    advice: '"과도한 매매에도 수익이라니!" - 수수료를 빼고도 이익이 남는지 확인해보세요!' 
+                },
+                'observer': { 
+                    icon: '👁️', 
+                    pattern: '관찰형 투자자',
+                    info: '매매 없이 시장을 관찰만 한 스타일',
+                    advice: '"아무것도 안 해서 수익?" - 아마 운이 좋았을 겁니다. 다음엔 행동해보세요!' 
+                }
+            },
+            // 성공 (0% ~ +30%)
+            'good': {
+                'patient': { 
+                    icon: '🎯', 
+                    pattern: '안정형 투자자',
+                    info: '꾸준한 매매로 안정적 수익을 달성',
+                    advice: '"꾸준함이 승부수다." - 이런 투자 스타일이야말로 장기 성공의 열쇠입니다!' 
+                },
+                'active': { 
+                    icon: '⚡', 
+                    pattern: '밸런스 트레이더',
+                    info: '적절한 매매 빈도로 수익 실현',
+                    advice: '"적당함의 미학!" - 너무 많지도 적지도 않은 매매, 훌륭한 밸런스입니다!' 
+                },
+                'emotional': { 
+                    icon: '🎲', 
+                    pattern: '감정 투자자',
+                    info: '감정적 판단으로도 선방한 케이스',
+                    advice: '"이번엔 운이 좋았네요." - 감정보다는 원칙에 따른 투자를 권장합니다!' 
+                },
+                'cautious': { 
+                    icon: '🐌', 
+                    pattern: '현명한 투자자',
+                    info: '신중한 판단으로 안정적 수익 확보',
+                    advice: '"현명한 선택입니다!" - 리스크 관리와 수익 추구의 훌륭한 균형을 보여주셨네요!' 
+                },
+                'overactive': { 
+                    icon: '🎪', 
+                    pattern: '과잉 활동가',
+                    info: '잦은 매매에도 불구하고 수익 달성',
+                    advice: '"바쁘게 움직여서 수익!" - 하지만 더 적은 매매로도 같은 수익이 가능했을 겁니다!' 
+                },
+                'observer': { 
+                    icon: '👁️', 
+                    pattern: '행운의 관찰자',
+                    info: '매매 없이도 약간의 이익',
+                    advice: '"가만히 있어도 돈이?" - 다음엔 적극적인 투자로 더 많은 기회를 잡아보세요!' 
+                }
+            },
+            // 보통 (-10% ~ 0%)
+            'average': {
+                'patient': { 
+                    icon: '🎯', 
+                    pattern: '보수적 투자자',
+                    info: '안전 우선의 투자 스타일',
+                    advice: '"안전이 최고지만..." - 때로는 계산된 위험도 필요합니다. 기회를 놓치지 마세요!' 
+                },
+                'active': { 
+                    icon: '⚡', 
+                    pattern: '혼란형 트레이더',
+                    info: '많은 매매에도 큰 성과 없음',
+                    advice: '"매매만 많다고 수익이 아니다." - 질보다 양에 치중하고 있는 것 같습니다!' 
+                },
+                'emotional': { 
+                    icon: '🎲', 
+                    pattern: '감정 기복형',
+                    info: '감정에 따른 매매로 평범한 결과',
+                    advice: '"감정은 투자의 적입니다." - 냉정한 분석과 인내심을 기르시기 바랍니다!' 
+                },
+                'cautious': { 
+                    icon: '🐌', 
+                    pattern: '너무 신중한 투자자',
+                    info: '과도한 신중함으로 기회 놓침',
+                    advice: '"신중함도 과하면 독!" - 완벽한 타이밍을 기다리다 기회를 놓치셨네요!' 
+                },
+                'overactive': { 
+                    icon: '🎪', 
+                    pattern: '무의미한 활동가',
+                    info: '잦은 매매로 수수료만 증가',
+                    advice: '"움직임이 많다고 수익은 아니다." - 매매 전에 한 번 더 생각해보세요!' 
+                },
+                'observer': { 
+                    icon: '👁️', 
+                    pattern: '기회 상실자',
+                    info: '아무 행동 없이 기회를 놓침',
+                    advice: '"기회는 준비된 자에게만!" - 관망만 하지 말고 용기있는 결정을 내려보세요!' 
+                }
+            },
+            // 손실 (-30% ~ -10%)
+            'loss': {
+                'patient': { 
+                    icon: '🎯', 
+                    pattern: '불운한 인내자',
+                    info: '기다렸지만 시장이 반대로 움직임',
+                    advice: '"때로는 손절매도 용기다." - 인내심은 좋지만, 손실을 제한하는 것도 중요합니다!' 
+                },
+                'active': { 
+                    icon: '⚡', 
+                    pattern: '혼란 매매자',
+                    info: '잦은 매매로 손실 확대',
+                    advice: '"매매할수록 손해!" - 방향성 없는 매매가 손실을 키웠습니다. 전략을 세우세요!' 
+                },
+                'emotional': { 
+                    icon: '🎲', 
+                    pattern: '감정적 손실자',
+                    info: '감정적 매매로 큰 손실 발생',
+                    advice: '"감정은 손실의 지름길." - 공포와 욕심을 버리고 냉정하게 판단하세요!' 
+                },
+                'cautious': { 
+                    icon: '🐌', 
+                    pattern: '타이밍 실패자',
+                    info: '신중했지만 잘못된 타이밍',
+                    advice: '"신중함도 때를 알아야!" - 분석은 좋았지만 실행 타이밍을 재고해보세요!' 
+                },
+                'overactive': { 
+                    icon: '🎪', 
+                    pattern: '자멸형 트레이더',
+                    info: '과도한 매매로 심각한 손실',
+                    advice: '"과유불급!" - 너무 많은 매매가 오히려 독이 되었습니다. 휴식이 필요해요!' 
+                },
+                'observer': { 
+                    icon: '👁️', 
+                    pattern: '수동적 손실자',
+                    info: '아무 행동 없이 손실 방치',
+                    advice: '"손실을 지켜만 봤나요?" - 때로는 적극적인 손절매가 더 큰 손실을 막습니다!' 
+                }
+            },
+            // 큰손실 (-30% 미만)
+            'disaster': {
+                'patient': { 
+                    icon: '🎯', 
+                    pattern: '고집불통 투자자',
+                    info: '잘못된 판단을 끝까지 고집',
+                    advice: '"고집과 인내는 다르다!" - 잘못되었다면 빨리 인정하고 방향을 바꾸세요!' 
+                },
+                'active': { 
+                    icon: '⚡', 
+                    pattern: '자폭형 트레이더',
+                    info: '매매할 때마다 손실 누적',
+                    advice: '"매매는 무기가 아니라 도구다." - 잠시 매매를 멈추고 전략을 재점검하세요!' 
+                },
+                'emotional': { 
+                    icon: '🎲', 
+                    pattern: '감정 폭발형',
+                    info: '감정적 매매로 최악의 결과',
+                    advice: '"감정 투자의 전형적 결말." - 투자 전에 마음을 가라앉히고 원칙을 세우세요!' 
+                },
+                'cautious': { 
+                    icon: '🐌', 
+                    pattern: '잘못된 신중함',
+                    info: '신중했지만 완전히 잘못된 방향',
+                    advice: '"신중하게 틀렸네요." - 분석 방법을 근본적으로 재검토해보시기 바랍니다!' 
+                },
+                'overactive': { 
+                    icon: '🎪', 
+                    pattern: '카지노형 투자자',
+                    info: '무차별 매매로 최악의 손실',
+                    advice: '"이건 투자가 아니라 도박!" - 매매를 멈추고 투자 공부부터 다시 시작하세요!' 
+                },
+                'observer': { 
+                    icon: '👁️', 
+                    pattern: '최악의 관찰자',
+                    info: '아무것도 안했는데 최악의 결과',
+                    advice: '"가만히 있어도 이렇게 잃을 수 있다니!" - 다음엔 적극적으로 손실을 방어하세요!' 
+                }
+            }
+        };
+        
+        // DOM 요소
+        const canvas = document.getElementById('chartCanvas');
+        const ctx = canvas.getContext('2d');
+        const currentMoneyEl = document.getElementById('currentMoney');
+        const profitDisplayEl = document.getElementById('profitDisplay');
+        const timeDisplayEl = document.getElementById('timeDisplay');
+        const roundDisplayEl = document.getElementById('roundDisplay');
+        const buyBtn = document.getElementById('buyBtn');
+        const sellBtn = document.getElementById('sellBtn');
+        const startScreen = document.getElementById('startScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const leaderboardScreen = document.getElementById('leaderboardScreen');
+        
+        // 매매 추적 함수들
+        function recordTrade(type, price, time) {
+            gameState.trades.push({
+                type: type, // 'buy' or 'sell'
+                price: price,
+                time: time,
+                timeLeft: gameState.timeLeft
+            });
+        }
+        
+        function recordPrice(price, time, volatility) {
+            gameState.priceHistory.push({
+                price: price,
+                time: time,
+                volatility: volatility
+            });
+        }
+        
+        function calculateVolatility() {
+            if (gameState.priceHistory.length < 2) return 0;
+            const recent = gameState.priceHistory.slice(-10);
+            let totalChange = 0;
+            for (let i = 1; i < recent.length; i++) {
+                totalChange += Math.abs(recent[i].price - recent[i-1].price);
+            }
+            return totalChange / recent.length;
+        }
+        
+        // 매매 패턴 분석
+        function analyzePattern() {
+            const trades = gameState.trades;
+            const tradeCount = trades.length;
+            
+            if (tradeCount === 0) return 'observer';
+            
+            // 매매 빈도 계산
+            if (tradeCount >= 5) {
+                return 'overactive';
+            }
+            
+            // 평균 보유 시간 계산
+            let totalHoldTime = 0;
+            let holdPeriods = 0;
+            let currentPositionStart = null;
+            
+            for (let trade of trades) {
+                if (trade.type === 'buy') {
+                    currentPositionStart = 45 - trade.timeLeft;
+                } else if (trade.type === 'sell' && currentPositionStart !== null) {
+                    totalHoldTime += (45 - trade.timeLeft) - currentPositionStart;
+                    holdPeriods++;
+                    currentPositionStart = null;
+                }
+            }
+            
+            const avgHoldTime = holdPeriods > 0 ? totalHoldTime / holdPeriods : 0;
+            
+            // 감정적 매매 체크 (고변동성 구간에서의 매매)
+            let emotionalTrades = 0;
+            for (let trade of trades) {
+                const tradeTime = 45 - trade.timeLeft;
+                const volatility = getVolatilityAtTime(tradeTime);
+                if (volatility > 2) {
+                    emotionalTrades++;
+                }
+            }
+            
+            const emotionalRatio = emotionalTrades / tradeCount;
+            
+            // 패턴 결정
+            if (emotionalRatio > 0.6) return 'emotional';
+            if (tradeCount <= 2 && avgHoldTime > 20) return 'patient';
+            if (tradeCount >= 3 && avgHoldTime < 15) return 'active';
+            if (tradeCount <= 2 && avgHoldTime < 20) return 'cautious';
+            
+            return 'cautious';
+        }
+        
+        function getVolatilityAtTime(time) {
+            // 해당 시간의 변동성 계산 (간단한 근사치)
+            const priceAtTime = gameState.priceHistory.find(p => Math.abs(p.time - time) < 1);
+            return priceAtTime ? priceAtTime.volatility : 0;
+        }
+        
+        // 수익률 구간 분석
+        function analyzePerformance(profitPercent) {
+            if (profitPercent >= 30) return 'excellent';
+            if (profitPercent >= 0) return 'good';
+            if (profitPercent >= -10) return 'average';
+            if (profitPercent >= -30) return 'loss';
+            return 'disaster';
+        }
+        
+        // 투자 조언 표시
+        function showAdvice(profitPercent) {
+            const performance = analyzePerformance(profitPercent);
+            const pattern = analyzePattern();
+            const advice = adviceMatrix[performance][pattern];
+            
+            document.getElementById('patternIcon').textContent = advice.icon;
+            document.getElementById('patternText').textContent = advice.pattern;
+            document.getElementById('patternInfo').textContent = advice.info;
+            document.getElementById('adviceText').textContent = advice.advice;
+            
+            document.getElementById('adviceSection').style.display = 'block';
+        }
+        
+        // 리더보드 관리
+        function getLeaderboard() {
+            const saved = localStorage.getItem('chartGameLeaderboard');
+            return saved ? JSON.parse(saved) : [];
+        }
+        
+        function saveLeaderboard(leaderboard) {
+            localStorage.setItem('chartGameLeaderboard', JSON.stringify(leaderboard));
+        }
+        
+        function addToLeaderboard(name, score) {
+            const leaderboard = getLeaderboard();
+            leaderboard.push({ name: name.toUpperCase(), score: Math.round(score) });
+            leaderboard.sort((a, b) => b.score - a.score);
+            const top10 = leaderboard.slice(0, 10);
+            saveLeaderboard(top10);
+            return top10;
+        }
+        
+        function isHighScore(score) {
+            const leaderboard = getLeaderboard();
+            return leaderboard.length < 10 || score > (leaderboard[9]?.score || 0);
+        }
+        
+        function showLeaderboard() {
+            const leaderboard = getLeaderboard();
+            const listEl = document.getElementById('leaderboardList');
+            
+            if (leaderboard.length === 0) {
+                listEl.innerHTML = '<p style="text-align: center; color: #666;">아직 기록이 없습니다</p>';
+            } else {
+                listEl.innerHTML = leaderboard.map((entry, index) => {
+                    const rankClass = index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : '';
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                    return `
+                        <div class="leaderboard-item">
+                            <span class="rank ${rankClass}">${medal}${index + 1}</span>
+                            <span class="player-name">${entry.name}</span>
+                            <span class="score">$${entry.score.toLocaleString()}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            leaderboardScreen.style.display = 'flex';
+        }
+        
+        function hideLeaderboard() {
+            leaderboardScreen.style.display = 'none';
+        }
+        
+        function restartFromLeaderboard() {
+            hideLeaderboard();
+            startScreen.style.display = 'block';
+            gameScreen.style.display = 'none';
+        }
+        
+        function clearLeaderboard() {
+            if (confirm('정말로 모든 기록을 삭제하시겠습니까?')) {
+                localStorage.removeItem('chartGameLeaderboard');
+                showLeaderboard();
+            }
+        }
+        
+        // Canvas 크기 설정
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 40;
+            canvas.height = container.clientHeight - 40;
+        }
+        
+        // 게임 시작
+        function startNewGame() {
+            window.tickCount = 0;
+            gameState = {
+                cash: 10000,
+                stocks: 0,
+                stockPrice: 100,
+                timeLeft: 45,
+                round: gameState.round,
+                gameRunning: true,
+                chartData: [{price: 100, time: 0}],
+                maxTime: 45,
+                currentMinPrice: 90,
+                currentMaxPrice: 110,
+                targetMinPrice: 90,
+                targetMaxPrice: 110,
+                trades: [],
+                priceHistory: [{price: 100, time: 0, volatility: 0}],
+                currentPosition: 'cash'
+            };
+            
+            startScreen.style.display = 'none';
+            gameScreen.style.display = 'block';
+            gameOverScreen.style.display = 'none';
+            updateUI();
+            resizeCanvas();
+            
+            // 게임 타이머 시작 (부드러운 애니메이션을 위해 100ms마다 업데이트)
+            const gameTimer = setInterval(() => {
+                if (!gameState.gameRunning) {
+                    clearInterval(gameTimer);
+                    return;
+                }
+                
+                window.tickCount++;
+                
+                // 100ms마다 작은 주가 변동
+                const smallChange = (Math.random() - 0.5) * 1.2;
+                gameState.stockPrice = Math.max(10, gameState.stockPrice + smallChange);
+                
+                // 가격 기록 (변동성 계산용)
+                const volatility = calculateVolatility();
+                recordPrice(gameState.stockPrice, gameState.maxTime - gameState.timeLeft + (window.tickCount % 10) * 0.1, volatility);
+                
+                // 차트 스케일 부드러운 업데이트
+                updateChartScale();
+                
+                // 1초마다 (10틱마다) 시간 감소 및 차트 데이터 추가
+                if (window.tickCount % 10 === 0) {
+                    gameState.timeLeft--;
+                    gameState.chartData.push({
+                        price: gameState.stockPrice,
+                        time: gameState.maxTime - gameState.timeLeft
+                    });
+                }
+                
+                updateUI();
+                drawChart();
+                
+                if (gameState.timeLeft <= 0) {
+                    endGame();
+                }
+            }, 100);
+        }
+        
+        // 차트 스케일 부드러운 업데이트
+        function updateChartScale() {
+            const prices = [...gameState.chartData.map(d => d.price), gameState.stockPrice];
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceRange = maxPrice - minPrice;
+            
+            // 현재 스케일에서 벗어나는 정도 체크 (15% 임계점)
+            const currentRange = gameState.currentMaxPrice - gameState.currentMinPrice;
+            const minThreshold = gameState.currentMinPrice + currentRange * 0.15;
+            const maxThreshold = gameState.currentMaxPrice - currentRange * 0.15;
+            
+            // 임계점을 넘으면 새로운 타겟 스케일 설정
+            if (minPrice < minThreshold || maxPrice > maxThreshold) {
+                const padding = Math.max(priceRange * 0.1, 5);
+                gameState.targetMinPrice = minPrice - padding;
+                gameState.targetMaxPrice = maxPrice + padding;
+            }
+            
+            // 현재 스케일을 타겟으로 부드럽게 이동 (5% 비율)
+            const lerpRate = 0.05;
+            gameState.currentMinPrice += (gameState.targetMinPrice - gameState.currentMinPrice) * lerpRate;
+            gameState.currentMaxPrice += (gameState.targetMaxPrice - gameState.currentMaxPrice) * lerpRate;
+        }
+        
+        // 실시간 차트 데이터 (매 100ms마다 업데이트)
+        let realtimeData = [];
+        
+        // 차트 그리기 (부드러운 애니메이션 버전)
+        function drawChart() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 실시간 데이터 업데이트 (현재 가격을 실시간으로 추가)
+            const currentTime = gameState.maxTime - gameState.timeLeft + (window.tickCount % 10) * 0.1;
+            realtimeData = [...gameState.chartData, {price: gameState.stockPrice, time: currentTime}];
+            
+            if (realtimeData.length < 2) return;
+            
+            const padding = 20;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - padding * 2;
+            
+            // 부드러운 스케일 사용
+            const priceRange = gameState.currentMaxPrice - gameState.currentMinPrice;
+            
+            // 그리드 그리기 (부드러운 그라데이션)
+            const gradient = ctx.createLinearGradient(0, padding, 0, canvas.height - padding);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0.1)');
+            
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (chartHeight / 5) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvas.width - padding, y);
+                ctx.stroke();
+            }
+            
+            // 부드러운 곡선 라인 그리기
+            ctx.strokeStyle = '#4ade80';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            
+            // 베지어 곡선을 사용한 부드러운 라인
+            realtimeData.forEach((point, index) => {
+                const x = padding + (chartWidth / gameState.maxTime) * point.time;
+                const y = padding + chartHeight - ((point.price - gameState.currentMinPrice) / priceRange) * chartHeight;
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else if (index === 1) {
+                    ctx.lineTo(x, y);
+                } else {
+                    // 부드러운 곡선을 위한 베지어 곡선
+                    const prevPoint = realtimeData[index - 1];
+                    const prevX = padding + (chartWidth / gameState.maxTime) * prevPoint.time;
+                    const prevY = padding + chartHeight - ((prevPoint.price - gameState.currentMinPrice) / priceRange) * chartHeight;
+                    
+                    const cpX = (prevX + x) / 2;
+                    ctx.quadraticCurveTo(cpX, prevY, x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // 현재 가격 포인트 (펄스 효과)
+            if (realtimeData.length > 0) {
+                const lastPoint = realtimeData[realtimeData.length - 1];
+                const x = padding + (chartWidth / gameState.maxTime) * lastPoint.time;
+                const y = padding + chartHeight - ((lastPoint.price - gameState.currentMinPrice) / priceRange) * chartHeight;
+                
+                // 펄스 효과를 위한 애니메이션
+                const pulseSize = 3 + Math.sin(Date.now() * 0.01) * 2;
+                
+                // 외곽 원 (펄스)
+                ctx.fillStyle = 'rgba(74, 222, 128, 0.3)';
+                ctx.beginPath();
+                ctx.arc(x, y, pulseSize + 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 내부 원
+                ctx.fillStyle = '#4ade80';
+                ctx.beginPath();
+                ctx.arc(x, y, pulseSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 가격 텍스트 (그림자 효과)
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 14px -apple-system';
+                ctx.fillText(`$${lastPoint.price.toFixed(1)}`, x + 15, y - 10);
+                ctx.shadowBlur = 0;
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            const totalValue = gameState.cash + (gameState.stocks * gameState.stockPrice);
+            const profit = ((totalValue - 10000) / 10000) * 100;
+            
+            currentMoneyEl.textContent = Math.round(totalValue);
+            
+            profitDisplayEl.textContent = `${profit >= 0 ? '📈' : '📉'} ${profit.toFixed(1)}%`;
+            profitDisplayEl.className = `profit ${profit >= 0 ? 'positive' : 'negative'}`;
+            
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            timeDisplayEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            roundDisplayEl.textContent = gameState.round;
+            
+            // 버튼 상태 업데이트
+            buyBtn.disabled = gameState.cash < gameState.stockPrice || !gameState.gameRunning || gameState.stocks > 0;
+            sellBtn.disabled = gameState.stocks === 0 || !gameState.gameRunning;
+        }
+        
+        // 매수 함수
+        function buyStock() {
+            if (gameState.cash >= gameState.stockPrice && gameState.gameRunning && gameState.stocks === 0) {
+                const stocksToBuy = Math.floor(gameState.cash / gameState.stockPrice);
+                gameState.stocks += stocksToBuy;
+                gameState.cash -= stocksToBuy * gameState.stockPrice;
+                gameState.currentPosition = 'stocks';
+                
+                // 매매 기록
+                recordTrade('buy', gameState.stockPrice, gameState.maxTime - gameState.timeLeft);
+                
+                updateUI();
+            }
+        }
+        
+        // 매도 함수
+        function sellStock() {
+            if (gameState.stocks > 0 && gameState.gameRunning) {
+                gameState.cash += gameState.stocks * gameState.stockPrice;
+                gameState.stocks = 0;
+                gameState.currentPosition = 'cash';
+                
+                // 매매 기록
+                recordTrade('sell', gameState.stockPrice, gameState.maxTime - gameState.timeLeft);
+                
+                updateUI();
+            }
+        }
+        
+        // 게임 종료
+        function endGame() {
+            gameState.gameRunning = false;
+            
+            const totalValue = gameState.cash + (gameState.stocks * gameState.stockPrice);
+            const profit = totalValue - 10000;
+            const profitPercent = (profit / 10000) * 100;
+            
+            let message = '';
+            if (profitPercent > 50) {
+                message = `🎉 Amazing! +${profitPercent.toFixed(1)}%`;
+            } else if (profitPercent > 20) {
+                message = `🔥 Excellent! +${profitPercent.toFixed(1)}%`;
+            } else if (profitPercent > 0) {
+                message = `👍 Good job! +${profitPercent.toFixed(1)}%`;
+            } else if (profitPercent > -10) {
+                message = `😐 Not bad! ${profitPercent.toFixed(1)}%`;
+            } else {
+                message = `😅 Try again! ${profitPercent.toFixed(1)}%`;
+            }
+            
+            document.getElementById('finalResult').textContent = message;
+            
+            // 투자 조언 표시
+            showAdvice(profitPercent);
+            
+            // 리더보드 체크
+            if (isHighScore(totalValue)) {
+                document.getElementById('newRecordSection').style.display = 'block';
+                document.getElementById('playerNameInput').value = '';
+                setTimeout(() => document.getElementById('playerNameInput').focus(), 100);
+            } else {
+                document.getElementById('newRecordSection').style.display = 'none';
+            }
+            
+            gameState.round++;
+            gameOverScreen.style.display = 'flex';
+        }
+        
+        // 게임 오버 처리 (개선된 플로우)
+        function handleGameOver() {
+            const newRecordSection = document.getElementById('newRecordSection');
+            const nameInput = document.getElementById('playerNameInput');
+            
+            // 리더보드 진입 시 이름 입력 체크
+            if (newRecordSection.style.display !== 'none') {
+                const playerName = nameInput.value.trim();
+                if (playerName.length !== 3) {
+                    alert('영문 3글자를 입력해주세요!');
+                    nameInput.focus();
+                    return;
+                }
+                
+                const totalValue = gameState.cash + (gameState.stocks * gameState.stockPrice);
+                addToLeaderboard(playerName, totalValue);
+            }
+            
+            // 게임 오버 화면 닫고 리더보드 표시
+            gameOverScreen.style.display = 'none';
+            showLeaderboard();
+        }
+        
+        // 이벤트 리스너
+        buyBtn.addEventListener('click', buyStock);
+        sellBtn.addEventListener('click', sellStock);
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 엔터키로 이름 입력 완료
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.getElementById('newRecordSection').style.display !== 'none') {
+                handleGameOver();
+            }
+        });
+        
+        // 이름 입력 필터링 (영문만)
+        document.getElementById('playerNameInput').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase();
+        });
+        
+        // 초기화
+        resizeCanvas();
+    </script>
+</body>
+</html>
