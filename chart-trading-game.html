@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📈 Chart Trading Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .money {
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.2s ease-out;
+        }
+        
+        .profit {
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease-out;
+        }
+        
+        .profit.positive {
+            color: #4ade80;
+        }
+        
+        .profit.negative {
+            color: #f87171;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            height: 250px;
+            position: relative;
+        }
+        
+        .chart-canvas {
+            width: 100%;
+            height: 100%;
+            transition: all 0.1s ease-out;
+        }
+        
+        .time-level-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .timer {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .level {
+            font-size: 14px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-buy {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: white;
+        }
+        
+        .btn-buy:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+        
+        .btn-sell {
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            color: white;
+        }
+        
+        .btn-sell:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+        
+        .game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .game-over-content {
+            background: white;
+            color: black;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 300px;
+        }
+        
+        .restart-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 상태바 -->
+        <div class="status-bar">
+            <div class="money">💰 $<span id="currentMoney">10000</span></div>
+            <div class="profit" id="profitDisplay">📈 0%</div>
+        </div>
+        
+        <!-- 차트 영역 -->
+        <div class="chart-container">
+            <canvas id="chartCanvas" class="chart-canvas"></canvas>
+        </div>
+        
+        <!-- 시간/레벨 바 -->
+        <div class="time-level-bar">
+            <div class="timer">⏰ <span id="timeDisplay">01:00</span></div>
+            <div class="level">🎯 Round <span id="roundDisplay">1</span></div>
+        </div>
+        
+        <!-- 조작 버튼 -->
+        <div class="control-buttons">
+            <button class="btn btn-buy" id="buyBtn">📈 BUY</button>
+            <button class="btn btn-sell" id="sellBtn" disabled>📉 SELL</button>
+        </div>
+    </div>
+    
+    <!-- 게임 오버 화면 -->
+    <div class="game-over" id="gameOverScreen">
+        <div class="game-over-content">
+            <h2>🎮 Round Complete!</h2>
+            <p id="finalResult"></p>
+            <button class="restart-btn" onclick="startNewGame()">🔄 Next Round</button>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let gameState = {
+            cash: 10000,
+            stocks: 0,
+            stockPrice: 100,
+            timeLeft: 45,
+            round: 1,
+            gameRunning: false,
+            chartData: [],
+            maxTime: 45
+        };
+        
+        // DOM 요소
+        const canvas = document.getElementById('chartCanvas');
+        const ctx = canvas.getContext('2d');
+        const currentMoneyEl = document.getElementById('currentMoney');
+        const profitDisplayEl = document.getElementById('profitDisplay');
+        const timeDisplayEl = document.getElementById('timeDisplay');
+        const roundDisplayEl = document.getElementById('roundDisplay');
+        const buyBtn = document.getElementById('buyBtn');
+        const sellBtn = document.getElementById('sellBtn');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        
+        // Canvas 크기 설정
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 40;
+            canvas.height = container.clientHeight - 40;
+        }
+        
+        // 게임 시작
+        function startNewGame() {
+            window.tickCount = 0;
+            gameState = {
+                cash: 10000,
+                stocks: 0,
+                stockPrice: 100,
+                timeLeft: 45,
+                round: gameState.round,
+                gameRunning: true,
+                chartData: [{price: 100, time: 0}],
+                maxTime: 45
+            };
+            
+            gameOverScreen.style.display = 'none';
+            updateUI();
+            resizeCanvas();
+            
+            // 게임 타이머 시작 (부드러운 애니메이션을 위해 100ms마다 업데이트)
+            window.tickCount = 0;
+            const gameTimer = setInterval(() => {
+                if (!gameState.gameRunning) {
+                    clearInterval(gameTimer);
+                    return;
+                }
+                
+                window.tickCount++;
+                
+                // 100ms마다 작은 주가 변동
+                const smallChange = (Math.random() - 0.5) * 1.5;
+                gameState.stockPrice = Math.max(10, gameState.stockPrice + smallChange);
+                
+                // 1초마다 (10틱마다) 시간 감소 및 차트 데이터 추가
+                if (window.tickCount % 10 === 0) {
+                    gameState.timeLeft--;
+                    gameState.chartData.push({
+                        price: gameState.stockPrice,
+                        time: gameState.maxTime - gameState.timeLeft
+                    });
+                }
+                
+                updateUI();
+                drawChart();
+                
+                if (gameState.timeLeft <= 0) {
+                    endGame();
+                }
+            }, 100);
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            const totalValue = gameState.cash + (gameState.stocks * gameState.stockPrice);
+            const profit = ((totalValue - 10000) / 10000) * 100;
+            
+            currentMoneyEl.textContent = Math.round(totalValue);
+            
+            profitDisplayEl.textContent = `${profit >= 0 ? '📈' : '📉'} ${profit.toFixed(1)}%`;
+            profitDisplayEl.className = `profit ${profit >= 0 ? 'positive' : 'negative'}`;
+            
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            timeDisplayEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            roundDisplayEl.textContent = gameState.round;
+            
+            // 버튼 상태 업데이트
+            buyBtn.disabled = gameState.cash < gameState.stockPrice || !gameState.gameRunning;
+            sellBtn.disabled = gameState.stocks === 0 || !gameState.gameRunning;
+        }
+        
+        // 실시간 차트 데이터 (매 100ms마다 업데이트)
+        let realtimeData = [];
+        
+        // 차트 그리기 (부드러운 애니메이션 버전)
+        function drawChart() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 실시간 데이터 업데이트 (현재 가격을 실시간으로 추가)
+            const currentTime = gameState.maxTime - gameState.timeLeft + (window.tickCount % 10) * 0.1;
+            realtimeData = [...gameState.chartData, {price: gameState.stockPrice, time: currentTime}];
+            
+            if (realtimeData.length < 2) return;
+            
+            const padding = 20;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - padding * 2;
+            
+            // 가격 범위 계산 (실시간 데이터 포함)
+            const prices = realtimeData.map(d => d.price);
+            const minPrice = Math.min(...prices) * 0.95;
+            const maxPrice = Math.max(...prices) * 1.05;
+            const priceRange = maxPrice - minPrice;
+            
+            // 그리드 그리기 (부드러운 그라데이션)
+            const gradient = ctx.createLinearGradient(0, padding, 0, canvas.height - padding);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0.1)');
+            
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (chartHeight / 5) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvas.width - padding, y);
+                ctx.stroke();
+            }
+            
+            // 차트 영역 배경 그라데이션
+            const chartGradient = ctx.createLinearGradient(0, padding, 0, canvas.height - padding);
+            chartGradient.addColorStop(0, 'rgba(74, 222, 128, 0.1)');
+            chartGradient.addColorStop(1, 'rgba(74, 222, 128, 0.01)');
+            
+            // 부드러운 곡선 라인 그리기
+            ctx.strokeStyle = '#4ade80';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            
+            // 베지어 곡선을 사용한 부드러운 라인
+            realtimeData.forEach((point, index) => {
+                const x = padding + (chartWidth / gameState.maxTime) * point.time;
+                const y = padding + chartHeight - ((point.price - minPrice) / priceRange) * chartHeight;
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else if (index === 1) {
+                    ctx.lineTo(x, y);
+                } else {
+                    // 부드러운 곡선을 위한 베지어 곡선
+                    const prevPoint = realtimeData[index - 1];
+                    const prevX = padding + (chartWidth / gameState.maxTime) * prevPoint.time;
+                    const prevY = padding + chartHeight - ((prevPoint.price - minPrice) / priceRange) * chartHeight;
+                    
+                    const cpX = (prevX + x) / 2;
+                    ctx.quadraticCurveTo(cpX, prevY, x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // 차트 아래 영역 채우기 (그라데이션)
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = chartGradient;
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+            
+            // 현재 가격 포인트 (펄스 효과)
+            if (realtimeData.length > 0) {
+                const lastPoint = realtimeData[realtimeData.length - 1];
+                const x = padding + (chartWidth / gameState.maxTime) * lastPoint.time;
+                const y = padding + chartHeight - ((lastPoint.price - minPrice) / priceRange) * chartHeight;
+                
+                // 펄스 효과를 위한 애니메이션
+                const pulseSize = 3 + Math.sin(Date.now() * 0.01) * 2;
+                
+                // 외곽 원 (펄스)
+                ctx.fillStyle = 'rgba(74, 222, 128, 0.3)';
+                ctx.beginPath();
+                ctx.arc(x, y, pulseSize + 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 내부 원
+                ctx.fillStyle = '#4ade80';
+                ctx.beginPath();
+                ctx.arc(x, y, pulseSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 가격 텍스트 (그림자 효과)
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 14px -apple-system';
+                ctx.fillText(`$${lastPoint.price.toFixed(1)}`, x + 15, y - 10);
+                ctx.shadowBlur = 0;
+            }
+        }
+        
+        // 매수 함수
+        function buyStock() {
+            if (gameState.cash >= gameState.stockPrice && gameState.gameRunning) {
+                const stocksToBuy = Math.floor(gameState.cash / gameState.stockPrice);
+                gameState.stocks += stocksToBuy;
+                gameState.cash -= stocksToBuy * gameState.stockPrice;
+                updateUI();
+            }
+        }
+        
+        // 매도 함수
+        function sellStock() {
+            if (gameState.stocks > 0 && gameState.gameRunning) {
+                gameState.cash += gameState.stocks * gameState.stockPrice;
+                gameState.stocks = 0;
+                updateUI();
+            }
+        }
+        
+        // 게임 종료
+        function endGame() {
+            gameState.gameRunning = false;
+            
+            const totalValue = gameState.cash + (gameState.stocks * gameState.stockPrice);
+            const profit = totalValue - 10000;
+            const profitPercent = (profit / 10000) * 100;
+            
+            let message = '';
+            if (profitPercent > 20) {
+                message = `🎉 Excellent! +${profitPercent.toFixed(1)}%`;
+            } else if (profitPercent > 0) {
+                message = `👍 Good job! +${profitPercent.toFixed(1)}%`;
+            } else if (profitPercent > -10) {
+                message = `😐 Not bad! ${profitPercent.toFixed(1)}%`;
+            } else {
+                message = `😅 Try again! ${profitPercent.toFixed(1)}%`;
+            }
+            
+            document.getElementById('finalResult').textContent = message;
+            gameState.round++;
+            gameOverScreen.style.display = 'flex';
+        }
+        
+        // 이벤트 리스너
+        buyBtn.addEventListener('click', buyStock);
+        sellBtn.addEventListener('click', sellStock);
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 게임 시작
+        startNewGame();
+    </script>
+</body>
+</html>
